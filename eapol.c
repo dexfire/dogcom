@@ -22,6 +22,7 @@
 #include <string.h>
 #include <time.h>
 
+#define ETH_ALEN       6              // 以太网地址大小
 #define BUFF_LEN (512)
 
 static uchar client_mac[ETH_ALEN];
@@ -268,6 +269,8 @@ static int eap_keep_alive(int skfd, struct sockaddr const *skaddr) {
     /* EAP_KPALV_TIMEOUT时间内已经不再有心跳包，我们认为服务器不再需要心跳包了 */
     //for (; difftime(time((time_t*)NULL), stime) <= EAP_KPALV_TIMEOUT; ) {
     stime = time((time_t *)NULL);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
     for (;;) {
         status = filte_req_identity(skfd, skaddr);
         //_D("%s: [EAP:KPALV] get status: %d\n", format_time(), status);
@@ -317,6 +320,7 @@ static int eap_keep_alive(int skfd, struct sockaddr const *skaddr) {
         }
         status = -1;
     }
+#pragma clang diagnostic pop
     return 0;
 }
 /*
@@ -339,7 +343,7 @@ static int eap_daemon(int skfd, struct sockaddr const *skaddr) {
     pid_t oldpid;
 
     fseek(kpalvfd, 0L, SEEK_SET);
-    if ((1 == fscanf(kpalvfd, "%d", (int *)&oldpid)) && (oldpid != (pid_t)-1)) {
+    if (1 == fscanf(kpalvfd, "%d", (int *) &oldpid) && (oldpid != (pid_t) -1)) {
         _D("oldkpalv pid: %d\n", oldpid);
         kill(oldpid, SIGKILL);
     }

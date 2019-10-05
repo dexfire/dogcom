@@ -41,8 +41,13 @@ install:	$(TARGET)
 	cp $(TARGET) $(INSTALL_DIR)
 
 clean:
+ifeq ($(win32), y)
+	del /f $(OBJS)
+	del /f $(TARGET)
+else
 	rm -f $(OBJS)
 	rm -f $(TARGET)
+endif
 
 distclean:  clean
 

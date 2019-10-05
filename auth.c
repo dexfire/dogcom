@@ -9,9 +9,11 @@
 #include <winsock2.h>
 typedef int socklen_t;
 #else
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
 #endif
 
 #include "auth.h"
@@ -34,7 +36,7 @@ int dhcp_challenge(int sockfd, struct sockaddr_in addr, unsigned char seed[]) {
     challenge_packet[3] = rand() & 0xff;
     challenge_packet[4] = drcom_config.AUTH_VERSION[0];
 
-    sendto(sockfd, challenge_packet, 20, 0, (struct sockaddr *)&addr, sizeof(addr));
+    sendto(sockfd, challenge_packet, 20, 0, (struct sockaddr *) &addr, sizeof(addr));
 
     if (verbose_flag) {
         print_packet("[Challenge sent] ", challenge_packet, 20);
@@ -50,7 +52,7 @@ int dhcp_challenge(int sockfd, struct sockaddr_in addr, unsigned char seed[]) {
 #endif
 
     socklen_t addrlen = sizeof(addr);
-    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *)&addr, &addrlen) < 0) {
+    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *) &addr, &addrlen) < 0) {
 #ifdef WIN32
         get_lasterror("Failed to recv data");
 #else
@@ -79,7 +81,8 @@ int dhcp_challenge(int sockfd, struct sockaddr_in addr, unsigned char seed[]) {
     return 0;
 }
 
-int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsigned char auth_information[], int try_JLUversion) {
+int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[],
+               unsigned char auth_information[], int try_JLUversion) {
     unsigned int login_packet_size;
     unsigned int length_padding = 0;
     int JLU_padding = 0;
@@ -126,16 +129,16 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
     uint64_t mac = 0;
     // unpack
     for (int i = 0; i < 6; i++) {
-        sum = (int)MD5A[i] + sum * 256;
+        sum = (int) MD5A[i] + sum * 256;
     }
     // unpack
     for (int i = 0; i < 6; i++) {
-        mac = (int)drcom_config.mac[i] + mac * 256;
+        mac = (int) drcom_config.mac[i] + mac * 256;
     }
     sum ^= mac;
     // pack
     for (int i = 6; i > 0; i--) {
-        MACxorMD5A[i - 1] = (unsigned char)(sum % 256);
+        MACxorMD5A[i - 1] = (unsigned char) (sum % 256);
         sum /= 256;
     }
     memcpy(login_packet + 58, MACxorMD5A, sizeof(MACxorMD5A));
@@ -188,7 +191,11 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
         OSBuild[0] = 0xf0;
         OSBuild[1] = 0x23;
         PlatformID[0] = 0x02;
-        unsigned char ServicePack[40] = {0x33, 0x64, 0x63, 0x37, 0x39, 0x66, 0x35, 0x32, 0x31, 0x32, 0x65, 0x38, 0x31, 0x37, 0x30, 0x61, 0x63, 0x66, 0x61, 0x39, 0x65, 0x63, 0x39, 0x35, 0x66, 0x31, 0x64, 0x37, 0x34, 0x39, 0x31, 0x36, 0x35, 0x34, 0x32, 0x62, 0x65, 0x37, 0x62, 0x31};
+        unsigned char ServicePack[40] = {0x33, 0x64, 0x63, 0x37, 0x39, 0x66, 0x35, 0x32, 0x31, 0x32,
+                                         0x65, 0x38, 0x31, 0x37, 0x30, 0x61, 0x63, 0x66, 0x61, 0x39,
+                                         0x65, 0x63, 0x39, 0x35, 0x66, 0x31, 0x64, 0x37, 0x34, 0x39,
+                                         0x31, 0x36, 0x35, 0x34, 0x32, 0x62, 0x65, 0x37, 0x62,
+                                         0x31};
         unsigned char hostname[9] = {0x44, 0x72, 0x43, 0x4f, 0x4d, 0x00, 0xcf, 0x07, 0x68};
         memcpy(login_packet + 182, hostname, 9);
         memcpy(login_packet + 246, ServicePack, 40);
@@ -219,8 +226,8 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
         login_packet[counter + 1] = strlen(drcom_config.password);
         counter += 2;
         for (int i = 0, x = 0; i < strlen(drcom_config.password); i++) {
-            x = (int)MD5A[i] ^ (int)drcom_config.password[i];
-            login_packet[counter + i] = (unsigned char)(((x << 3) & 0xff) + (x >> 5));
+            x = (int) MD5A[i] ^ (int) drcom_config.password[i];
+            login_packet[counter + i] = (unsigned char) (((x << 3) & 0xff) + (x >> 5));
         }
         counter += strlen(drcom_config.password);
         // print_packet("TEST ", ror, strlen(drcom_config.password));
@@ -241,13 +248,13 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
         ret = 0;
         // reverse unsigned char array[4]
         for (int j = 4; j > 0; j--) {
-            ret = ret * 256 + (int)checksum2_str[i + j - 1];
+            ret = ret * 256 + (int) checksum2_str[i + j - 1];
         }
         sum ^= ret;
     }
     sum = (1968 * sum) & 0xffffffff;
     for (int j = 0; j < 4; j++) {
-        checksum2[j] = (unsigned char)(sum >> (j * 8) & 0xff);
+        checksum2[j] = (unsigned char) (sum >> (j * 8) & 0xff);
     }
     memcpy(login_packet + counter + 2, checksum2, 4);
     memcpy(login_packet + counter + 8, drcom_config.mac, 6);
@@ -258,7 +265,7 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
         login_packet[counter + ror_padding + 15] = 0xa2;
     }
 
-    sendto(sockfd, login_packet, sizeof(login_packet), 0, (struct sockaddr *)&addr, sizeof(addr));
+    sendto(sockfd, login_packet, sizeof(login_packet), 0, (struct sockaddr *) &addr, sizeof(addr));
 
     if (verbose_flag) {
         print_packet("[Login sent] ", login_packet, sizeof(login_packet));
@@ -275,7 +282,7 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
 #endif
 
     socklen_t addrlen = sizeof(addr);
-    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *)&addr, &addrlen) < 0) {
+    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *) &addr, &addrlen) < 0) {
 #ifdef WIN32
         get_lasterror("Failed to recv data");
 #else
@@ -306,16 +313,19 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
                     strcpy(err_msg, "[Tips] Account and password not match.");
                     break;
                 case NOT_ENOUGH:
-                    strcpy(err_msg, "[Tips] The cumulative time or traffic for this account has exceeded the limit.");
+                    strcpy(err_msg,
+                           "[Tips] The cumulative time or traffic for this account has exceeded the limit.");
                     break;
                 case FREEZE_UP:
                     strcpy(err_msg, "[Tips] This account is suspended.");
                     break;
                 case NOT_ON_THIS_IP:
-                    strcpy(err_msg, "[Tips] IP address does not match, this account can only be used in the specified IP address.");
+                    strcpy(err_msg,
+                           "[Tips] IP address does not match, this account can only be used in the specified IP address.");
                     break;
                 case NOT_ON_THIS_MAC:
-                    strcpy(err_msg, "[Tips] MAC address does not match, this account can only be used in the specified IP and MAC address.");
+                    strcpy(err_msg,
+                           "[Tips] MAC address does not match, this account can only be used in the specified IP and MAC address.");
                     break;
                 case TOO_MUCH_IP:
                     strcpy(err_msg, "[Tips] This account has too many IP addresses.");
@@ -324,10 +334,12 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
                     strcpy(err_msg, "[Tips] The client version is incorrect.");
                     break;
                 case NOT_ON_THIS_IP_MAC:
-                    strcpy(err_msg, "[Tips] This account can only be used on specified MAC and IP address.");
+                    strcpy(err_msg,
+                           "[Tips] This account can only be used on specified MAC and IP address.");
                     break;
                 case MUST_USE_DHCP:
-                    strcpy(err_msg, "[Tips] Your PC set up a static IP, please change to DHCP, and then re-login.");
+                    strcpy(err_msg,
+                           "[Tips] Your PC set up a static IP, please change to DHCP, and then re-login.");
                     break;
                 default:
                     strcpy(err_msg, "[Tips] Unknown error number.");
@@ -355,14 +367,15 @@ int dhcp_login(int sockfd, struct sockaddr_in addr, unsigned char seed[], unsign
     print_packet("<GET AUTH_INFORMATION> ", auth_information, 16);
 #endif
 
-    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *)&addr, &addrlen) >= 0) {
+    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *) &addr, &addrlen) >= 0) {
         DEBUG_PRINT(("Get notice packet."));
     }
 
     return 0;
 }
 
-int pppoe_challenge(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigned char seed[], unsigned char sip[], int *encrypt_mode) {
+int pppoe_challenge(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigned char seed[],
+                    unsigned char sip[], int *encrypt_mode) {
     unsigned char challenge_packet[8], recv_packet[1024];
     memset(challenge_packet, 0, 8);
     unsigned char challenge_tmp[5] = {0x07, 0x00, 0x08, 0x00, 0x01};
@@ -370,7 +383,7 @@ int pppoe_challenge(int sockfd, struct sockaddr_in addr, int *pppoe_counter, uns
     challenge_packet[1] = *pppoe_counter % 0xFF;
     (*pppoe_counter)++;
 
-    sendto(sockfd, challenge_packet, 8, 0, (struct sockaddr *)&addr, sizeof(addr));
+    sendto(sockfd, challenge_packet, 8, 0, (struct sockaddr *) &addr, sizeof(addr));
 
     if (verbose_flag) {
         print_packet("[Challenge sent] ", challenge_packet, 8);
@@ -391,7 +404,7 @@ int pppoe_challenge(int sockfd, struct sockaddr_in addr, int *pppoe_counter, uns
 #endif
 
     socklen_t addrlen = sizeof(addr);
-    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *)&addr, &addrlen) < 0) {
+    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *) &addr, &addrlen) < 0) {
 #ifdef WIN32
         get_lasterror("Failed to recv data");
 #else
@@ -433,7 +446,8 @@ int pppoe_challenge(int sockfd, struct sockaddr_in addr, int *pppoe_counter, uns
     return 0;
 }
 
-int pppoe_login(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigned char seed[], unsigned char sip[], int *login_first, int *encrypt_mode, int *encrypt_type) {
+int pppoe_login(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigned char seed[],
+                unsigned char sip[], int *login_first, int *encrypt_mode, int *encrypt_type) {
     unsigned char login_packet[96], recv_packet[1024];
     memset(login_packet, 0, 96);
     unsigned char login_tmp[5] = {0x07, 0x00, 0x60, 0x00, 0x03};
@@ -464,14 +478,14 @@ int pppoe_login(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigne
         for (int i = 0; i < 32; i += 4) {
             ret = 0;
             for (int j = 4; j > 0; j--) {
-                ret = ret * 256 + (int)crc_tmp[i + j - 1];
+                ret = ret * 256 + (int) crc_tmp[i + j - 1];
             }
             sum ^= ret;
             sum &= 0xffffffff;
         }
         sum = sum * 19680126 & 0xffffffff;
         for (int i = 0; i < 4; i++) {
-            crc2[i] = (unsigned char)(sum % 256);
+            crc2[i] = (unsigned char) (sum % 256);
             sum /= 256;
         }
         memcpy(login_packet + 24, crc2, 4);
@@ -484,7 +498,7 @@ int pppoe_login(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigne
     // memcpy(login_packet + 44, smask, 4);
     // login_packet[54] = 0x40;
 
-    sendto(sockfd, login_packet, 96, 0, (struct sockaddr *)&addr, sizeof(addr));
+    sendto(sockfd, login_packet, 96, 0, (struct sockaddr *) &addr, sizeof(addr));
     if (verbose_flag) {
         print_packet("[PPPoE_login sent] ", login_packet, 96);
     }
@@ -496,7 +510,7 @@ int pppoe_login(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigne
 #endif
 
     socklen_t addrlen = sizeof(addr);
-    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *)&addr, &addrlen) < 0) {
+    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *) &addr, &addrlen) < 0) {
 #ifdef WIN32
         get_lasterror("Failed to recv data");
 #else
@@ -517,7 +531,7 @@ int pppoe_login(int sockfd, struct sockaddr_in addr, int *pppoe_counter, unsigne
         return 1;
     }
 
-    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *)&addr, &addrlen) >= 0) {
+    if (recvfrom(sockfd, recv_packet, 1024, 0, (struct sockaddr *) &addr, &addrlen) >= 0) {
         DEBUG_PRINT(("Get notice packet."));
     }
 
@@ -569,7 +583,7 @@ int dogcom(int try_times) {
         return 1;
     }
     // bind socket
-    if (bind(sockfd, (struct sockaddr *)&bind_addr, sizeof(bind_addr)) < 0) {
+    if (bind(sockfd, (struct sockaddr *) &bind_addr, sizeof(bind_addr)) < 0) {
 #ifdef WIN32
         get_lasterror("Failed to bind socket");
 #else
@@ -586,7 +600,7 @@ int dogcom(int try_times) {
     timeout.tv_sec = 3;
     timeout.tv_usec = 0;
 #endif
-    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *) &timeout, sizeof(timeout)) < 0) {
 #ifdef WIN32
         get_lasterror("Failed to set sock opt");
 #else
@@ -678,7 +692,8 @@ int dogcom(int try_times) {
                 continue;
             } else {
                 usleep(200000);  // 0.2 sec
-                if (pppoe_login(sockfd, dest_addr, &pppoe_counter, seed, sip, &login_first, &encrypt_mode, &encrypt_type)) {
+                if (pppoe_login(sockfd, dest_addr, &pppoe_counter, seed, sip, &login_first,
+                                &encrypt_mode, &encrypt_type)) {
                     continue;
                 } else {
                     login_first = 0;
@@ -730,7 +745,8 @@ void logging(char msg[10], unsigned char *packet, int length) {
     time(&timep);
     p = localtime(&timep);
     fprintf(ptr_file, "[%04d/%02d/%02d %s %02d:%02d:%02d] ",
-            (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, wday[p->tm_wday], p->tm_hour, p->tm_min, p->tm_sec);
+            (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, wday[p->tm_wday], p->tm_hour,
+            p->tm_min, p->tm_sec);
 
     fprintf(ptr_file, "%s", msg);
     for (int i = 0; i < length; i++) {

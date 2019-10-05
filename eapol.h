@@ -4,7 +4,7 @@
 #include "libs/common.h"
 
 #define IDEN_LEN UNAME_LEN
-
+#define ETH_ALEN       6              // 以太网地址大小
 #define TRY_TIMES (3)
 /* 每次请求超过TIMEOUT秒，就重新请求一次 */
 #define TIMEOUT (3)

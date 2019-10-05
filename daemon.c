@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "debug.h"
+#include <sys/file.h>
+#include <unistd.h>
 
 int daemon_flag = 0;
 int pid_file_handle;

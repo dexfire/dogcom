@@ -19,6 +19,20 @@ typedef unsigned int uint32;	/* 四个字节 */
 #include <arpa/inet.h>
 #include <net/if.h>
 #define EXE_PATH_MAX   (PATH_MAX+1)
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/if_ether.h>
+#include <net/ethernet.h>
+#include <net/if_arp.h>
+// #include <net/if.h>
+#include <netpacket/packet.h>
 // #elif WIN32
 // # include <windows.h>
 // # define ETH_ALEN	    (6)
