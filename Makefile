@@ -1,14 +1,19 @@
-CC     = gcc
-TARGET = dogcom
-INSTALL_DIR = /usr/bin/
+CC     			= clang
+TARGET 			= dogcom
+INSTALL_DIR 	= /usr/bin/
+win32  			:= y
+test   			:= n
+LNFLAGS 		:= -lws2_32
 
 ifeq ($(debug), y)
 	CFLAGS += -DDEBUG -g
 endif
 
 ifeq ($(win32), y)
-	CFLAGS += -lws2_32
-	# TARGET = dogcom.exe
+	# CFLAGS += -lws2_32
+	CFLAGS += --target=x86_64-w64-mingw32 -Wno-error
+	CFLAGS += -IC:\Software\LLVM\x86_64-w64-mingw32\include
+	TARGET = dogcom.exe
 endif
 
 ifeq ($(static), y)
@@ -16,7 +21,7 @@ ifeq ($(static), y)
 endif
 
 ifeq ($(strip), y)
-	CFLAGS += -Os -s -Wno-unused-result
+	CFLAGS += -Os -s -Wno-unused-result -l
 endif
 
 ifeq ($(force_encrypt), y)
@@ -24,16 +29,16 @@ ifeq ($(force_encrypt), y)
 endif
 
 ifeq ($(test), y)
-	CFLAGS += -std=gnu99 -Werror -DTEST
+	CFLAGS += -std=gnu99 -DTEST
 else
-	CFLAGS += -std=gnu99 -Werror
+	CFLAGS += -std=gnu99
 endif
 
 SOURCES = $(wildcard *.c) $(wildcard libs/*.c)
 OBJS    = $(patsubst %.c, %.o, $(SOURCES))
 
 $(TARGET):	$(OBJS)
-	$(CC) $(DEBUG) $(TEST) $(OBJS) $(CFLAGS) -o $(TARGET)
+	$(CC) $(DEBUG) $(TEST) $(OBJS) $(CFLAGS) $(LNFLAGS) -o $(TARGET)
 
 all:	$(TARGET)
 
@@ -41,8 +46,13 @@ install:	$(TARGET)
 	cp $(TARGET) $(INSTALL_DIR)
 
 clean:
+ifeq ($(win32), y)
+	del /q $(subst /,\,$(OBJS))
+	del /q $(subst /,\,$(TARGET))
+else
 	rm -f $(OBJS)
 	rm -f $(TARGET)
+endif
 
 distclean:  clean
 

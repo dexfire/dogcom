@@ -2,6 +2,7 @@
 #define AUTH_H_
 
 #ifdef WIN32
+#include <windef.h>
 #include <winsock2.h>
 #else
 #include <netinet/in.h>
